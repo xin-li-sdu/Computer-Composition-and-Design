@@ -1,0 +1,125 @@
+module adder(
+input ia, //一位加法器中的二进制加数 ia
+input ib,//一位加法器中的二进制加数 ib
+input cin,//从之前一位低位来的进位信号 Cin
+output cout,//自身加法器向高位加法器的进位信号 Cout
+output sum //一位加法器中的二进制和数 sum
+);
+wire sum;
+wire cout;
+assign sum=ia^ib^cin;
+assign cout=(ia&ib)|(ib&cin)|(ia&cin);
+endmodule
+module full_add_sub4(
+input [3:0] a,//四位有符号数补码
+input [3:0] b,//四位有符号数补码
+input cin,//低位来的进位信号
+input operator,//决定加法还是减法
+output [7:0] led_id,//亮灯
+output reg [7:0] out_led ,//数显
+output overflow //溢出标志
+);
+wire  [3:0] result;//运算结果补码形式
+assign led_id = 8'b1111_1110; // 八个比特分别控制八个led灯，0表示该灯开启
+wire [3:0]temp1;
+wire [3:0]temp2;
+wire g;
+reg overflow;
+assign g=cin^~operator;//=1 加法，=0 减法
+assign temp2[0]=operator?b[0]:~b[0];//根据加减法选择合适的数值
+assign temp2[1]=operator?b[1]:~b[1];
+assign temp2[2]=operator?b[2]:~b[2];
+assign temp2[3]=operator?b[3]:~b[3];
+adder i1 (a[0],temp2[0],g, temp1[1],result[0]);
+adder i2 (a[1],temp2[1],temp1[1],temp1[2],result[1]);
+adder i3 (a[2],temp2[2],temp1[2],temp1[3],result[2]);
+adder i4 (a[3],temp2[3],temp1[3],temp1[0],result[3]);
+always@(*)
+overflow=temp1[0]^temp1[3];
+
+//七段数码管
+    always @(*) begin
+         case(result)  // 八个比特控制led灯的八个灯管（包括小数点），0表示该灯管开启
+                4'b0000: out_led = 8'b0000_0011;    //0
+                4'b0001: out_led = 8'b1001_1111;    //1
+                4'b0010: out_led = 8'b0010_0101;    //2
+                4'b0011: out_led = 8'b0000_1101;    //3
+                4'b0100: out_led = 8'b1001_1001;    //4
+                4'b0101: out_led = 8'b0100_1001;    //5
+                4'b0110: out_led = 8'b0100_0001;    //6
+                4'b0111: out_led = 8'b0001_1111;    //7
+                4'b1000: out_led = 8'b0000_0001;    //8
+                4'b1001: out_led = 8'b0000_1001;    //9
+                4'b1010: out_led = 8'b0001_0001;    //A
+                4'b1011: out_led = 8'b1100_0001;    //b
+                4'b1100: out_led = 8'b0110_0011;    //C
+                4'b1101: out_led = 8'b1000_0101;    //d
+                4'b1110: out_led = 8'b0110_0001;    //E
+                4'b1111: out_led = 8'b0111_0001;    //F             
+                default:
+                   out_led = 8'b1111_1111;
+           endcase
+       end
+endmodule
+
+
+
+set_property IOSTANDARD LVCMOS33 [get_ports {a[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {a[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {a[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {a[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {b[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {b[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {b[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {b[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports overflow]
+set_property IOSTANDARD LVCMOS33 [get_ports cin]
+set_property IOSTANDARD LVCMOS33 [get_ports operator]
+set_property PACKAGE_PIN V10 [get_ports operator]
+set_property PACKAGE_PIN U11 [get_ports cin]
+set_property PACKAGE_PIN J15 [get_ports {a[0]}]
+set_property PACKAGE_PIN L16 [get_ports {a[1]}]
+set_property PACKAGE_PIN M13 [get_ports {a[2]}]
+set_property PACKAGE_PIN R15 [get_ports {a[3]}]
+set_property PACKAGE_PIN R17 [get_ports {b[0]}]
+set_property PACKAGE_PIN T18 [get_ports {b[1]}]
+set_property PACKAGE_PIN U18 [get_ports {b[2]}]
+set_property PACKAGE_PIN R13 [get_ports {b[3]}]
+set_property PACKAGE_PIN V11 [get_ports overflow]
+
+set_property IOSTANDARD LVCMOS33 [get_ports {led_id[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {led_id[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {led_id[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {led_id[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {led_id[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {led_id[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {led_id[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {led_id[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {led_id[0]}]
+set_property PACKAGE_PIN J17 [get_ports {led_id[0]}]
+set_property PACKAGE_PIN J18 [get_ports {led_id[1]}]
+set_property PACKAGE_PIN T9 [get_ports {led_id[2]}]
+set_property PACKAGE_PIN J14 [get_ports {led_id[3]}]
+set_property PACKAGE_PIN P14 [get_ports {led_id[4]}]
+set_property PACKAGE_PIN T14 [get_ports {led_id[5]}]
+set_property PACKAGE_PIN K2 [get_ports {led_id[6]}]
+set_property PACKAGE_PIN U13 [get_ports {led_id[7]}]
+
+
+
+set_property IOSTANDARD LVCMOS33 [get_ports {out_led[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {out_led[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {out_led[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {out_led[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {out_led[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {out_led[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {out_led[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {out_led[0]}]
+set_property PACKAGE_PIN T10 [get_ports {out_led[7]}]
+set_property PACKAGE_PIN R10 [get_ports {out_led[6]}]
+set_property PACKAGE_PIN K16 [get_ports {out_led[5]}]
+set_property PACKAGE_PIN K13 [get_ports {out_led[4]}]
+set_property PACKAGE_PIN P15 [get_ports {out_led[3]}]
+set_property PACKAGE_PIN T11 [get_ports {out_led[2]}]
+set_property PACKAGE_PIN L18 [get_ports {out_led[1]}]
+set_property PACKAGE_PIN H15 [get_ports {out_led[0]}]

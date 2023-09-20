@@ -1,0 +1,372 @@
+		module adder(  
+	    input ia, //1位二进制加数  
+	    input ib,//1 位二进制加数  
+	    input cin,//低位来的进位信号  
+	    output cout,//向高位的进位信号  
+	    output sum//1 位和数  
+	   );    
+	wire   x1;  
+	wire   x2;  
+	wire   x3;  
+	assign x1 = ia ^ ib;  
+	assign x2 = cin & x1;  
+	assign x3 = ia & ib;    
+	assign sum = x1 ^ cin;  
+	assign cout = x2 | x3;  
+	endmodule  
+//八位全加器：（有符号）
+	module adder_8bit(  
+	input[7:0] a,  
+	input[7:0] b,  	  
+	input cin,  
+	output[7:0] s,  
+	output overflow  
+	      );  	  
+	      wire x1, x2;  	  
+	adder f0(a[0], b[0], cin, co1, s[0]);  
+	adder f1(a[1], b[1], co1, co2, s[1]);  
+	adder f2(a[2], b[2], co2, co3, s[2]);  
+	adder f3(a[3], b[3], co3, co4, s[3]);  
+	adder f4(a[4], b[4], co4, co5, s[4]);  
+	adder f5(a[5], b[5], co5, co6, s[5]);  
+	adder f6(a[6], b[6], co6, co7, s[6]);  
+	adder f7(a[7], b[7], co7, co8, s[7]);  
+	assign x1 = ~(a[7] ^ b[7]); //判断a,b的符号是否相同  
+	assign x2 = a[7] ^ s[7];    //判断a,s的符号是否不同  
+	assign overflow = x1 & x2;  //利用a,b,s的符号判溢出  
+	endmodule
+//八位加法器：（无符号）
+	module unsigned_adder_8bit(  
+	    input[7:0] a,  
+	    input[7:0] b,  
+	    input cin,  
+	    output[7:0] s,  
+	    output overflow  
+	    );  
+	    adder f0(a[0], b[0], cin, co1, s[0]);  	  
+              adder f1(a[1], b[1], co1, co2, s[1]);  
+	    adder f2(a[2], b[2], co2, co3, s[2]);  
+	    adder f3(a[3], b[3], co3, co4, s[3]);  
+	    adder f4(a[4], b[4], co4, co5, s[4]);  
+	    adder f5(a[5], b[5], co5, co6, s[5]);  
+	    adder f6(a[6], b[6], co6, co7, s[6]);  
+	    adder f7(a[7], b[7], co7, overflow, s[7]);  
+	  endmodule 
+//十六位全加器：
+	module adder_16bit(  
+	    input[15:0] a,  
+	    input[15:0] b,  
+	    input cin,  
+	    output[15:0] s,  
+	    output overflow  
+	    );  
+	    wire co;  
+	    unsigned_adder_8bit f1(a[7:0], b[7:0], 0, s[7:0], co);  
+	    unsigned_adder_8bit f2(a[15:8], b[15:8], co, s[15:8], overflow);  
+	 endmodule
+//八位有符号乘法器：
+	module mult(  
+	    input[7:0] a,  
+	    input[7:0] b,  
+	    input sign,  
+	    output[7:0] s,  
+	    output of  
+	    );     
+	    reg[15:0] tmp,sum1;  
+	    reg [15:0] mux0,mux1,mux2,mux3,mux4,mux5,mux6;  
+	    wire [15:0] sum,cout1,cout2,cout3,cout4,cout5,sum2;    
+	    always@(*)begin  
+	        tmp={{8{1'b0}}, b};  
+	        if(a[0])mux0=tmp; else mux0=16'd0; // 若 a 的当前位为 1 则运算  
+	        tmp=tmp<<1;  
+	        if(a[1])mux1=tmp; else mux1=16'd0;  
+	        tmp=tmp<<1;  
+	        if(a[2])mux2=tmp; else mux2=16'd0;  
+	        tmp=tmp<<1;  
+	        if(a[3])mux3=tmp; else mux3=16'd0;  
+	        tmp=tmp<<1;  
+	        if(a[4])mux4=tmp; else mux4=16'd0;  
+	        tmp=tmp<<1;  
+	        if(a[5])mux5=tmp; else mux5=16'd0;  
+	        tmp=tmp<<1;  
+	        if(a[6])mux6=tmp; else mux6=16'd0;          
+	    end      
+	    adder_16bit f0(mux0,mux1,0,cout1,co1);  
+	    adder_16bit f1(cout1,mux2,0,cout2,co2);  
+	    adder_16bit f2(cout2,mux3,0,cout3,co3);  
+	    adder_16bit f3(cout3,mux4,0,cout4,co4);  
+	    adder_16bit f4(cout4,mux5,0,cout5,co5);  
+	    adder_16bit f5(cout5,mux6,0,sum,co6);      
+	    always@(*)begin  
+	        if(sign==1)sum1=(~sum)+1;  
+  	        else sum1=sum;      
+	    end  
+	    assign sum2=sum1;  
+	    assign of=(sum2[15:7]!=9'b000000000)&&(sum2[15:7]!=9'b111111111);  
+  	    assign s=sum2[7:0];  
+	      
+	endmodule 
+//ALU：
+	module alu(  
+	    input[3:0] operator,  
+	    input[7:0] A,  
+	    input[7:0] B,  
+	    output[7:0]r,//运算结果  
+	    output ZF,//0 标志位, 运算结果为 0(全零)则置 1, 否则置 0  
+	            CF,//进借位标志位  
+	            OF,//溢出标志位  
+	            SF, //符号标志位，与 r 的最高位相同  
+	            PF  
+	);  
+	    reg[7:0] A1,B1, C, m1,m2,out;  
+	    reg of,f;  
+	    wire[7:0] A2,B2,C1,C2;  
+	    wire of1,of2, ccf,cf,CCF;   
+	    always@(*)begin  
+	        A1=~A;  
+	        B1=~B;  
+	    end  
+	    adder_8bit(A1,0,1,A2,);  
+	    adder_8bit(B1,0,1,B2,);  
+  	    always @(*)begin  
+	        case (operator)  
+	            4'b0010:  //A+B
+	                begin  
+	                    C=B;  
+	                    m1=0;  
+  	                    m2=0;  
+	                end  
+	            4'b0110: //A-B 
+	                begin  
+	                    C=B2;  
+	                    m1=0;  
+	                    m2=0;  
+	                end  
+	            4'b1110:  //A*B
+	                begin  
+	                    C=0;  
+	                    if(A[7]==1'b1)m1=A2;  
+	                    else m1=A;  
+	                    if(B[7]==1'b1)m2=B2;  
+	                    else m2=B;  
+	                end  
+	            4'b0111:  //小于置位
+	                begin  
+	                    C=B2;  
+	                    m1=0;  
+	                    m2=0;  
+	                end  
+	        endcase  
+	    end  
+	    adder_8bit(A,C,0,C1,of1);  
+	    mult(m1,m2,A[7]^B[7],C2,of2);  
+	    adder f0(A[7],C[7],0,ccf,cf);  
+	     always @(*)begin  //数据预处理
+	        if(operator==4'b0010||operator==4'b0110)begin  //判断是否为加法器
+	            out=C1;  
+	            of=of1;  
+	            f=1;  
+	        end  
+	        else if(operator==4'b1110)begin  //判断是否为乘法
+	            out=C2;  
+            of=of2;  
+	            f=1;  
+	        end  
+	        else if(operator==4'b0000)begin  //A&B
+            out=A&B;  
+	            of=0;  
+	        end  
+	        else if(operator==4'b0001)begin  //A|B
+	            out=A|B;  
+	            of=0;  
+	            f=0;  
+	        end  
+	        else if(operator==4'b1100)begin   //~(A|B)
+	            out=~(A|B);  
+	            of=0;  
+	            f=0;  
+  	        end  
+	else if(operator==4'b0111)begin   //小于置位
+	            out=C1[7];  
+	            of=0;  
+	            f=0;  
+	        end   
+	 else if(operator==4'b1101)begin   //~(A & B)	
+                     out=~(A & B);  
+	            of=0;  
+	            f=0;  
+	        end  
+	     end       
+	       
+	     assign r=out;  
+	     assign CCF = ccf | ((cf == 1) & (r[7] == 0));
+	     assign OF=of;  
+	     assign ZF = (r == 0);      
+     assign SF = OF^r[7];      
+	     assign PF = r[7]^r[6]^r[5]^r[4]^r[3]^r[2]^r[1]^r[0];      
+	     assign CF = (CCF^(operator[3:1]==3'b001))&f;  
+	      	endmodule       
+//CPU：
+	module CPU(  
+	    input clk, // 输入时钟  
+	    input [9:0] b, // 10位指令  
+	    output reg [7:0] data_out, //  输出看一下结果 
+	    output reg [4:0] XF,  
+	    output reg [7:0] led_id,  
+	    output reg [6:0] out_led  
+	);  
+	    reg [7:0] mymem [2:0]; // 定义 32 个 8 位存储器（mymem[i]表示第 i 个存储器）  
+	    wire [7:0] zc;  
+  	    reg [4:0] lt;  
+	    reg [1:0] addr;  
+	    wire ZF,CF,OF,SF,PF;  
+	    wire [3:0] code;  
+	    assign code = b[7:4];  
+	    always@ (posedge clk) begin  
+	        if (b[8] && b[7] && !b[6]) begin                //10存储操作
+	            if (b[5:4]) mymem[1] = {b[3],b[3],b[3],b[3],b[3:0]};  
+	            if (!b[5:4]) mymem[0] = {b[3],b[3],b[3],b[3],b[3:0]};  
+	        end  
+	        if (b[8] && b[7] && b[6] && b[5] && b[4] && !b[3] && !b[2]) begin  //111100读取操作
+	            addr = b[1:0];  
+	            data_out = mymem[addr];  
+	            if (addr == 2) XF = lt;  
+	            else XF = 0;  
+	        end  
+	        else begin   
+	            data_out = 0; XF = 0;  
+	        end  
+	    end  
+	   
+	    always@ (posedge b[9]) begin  
+	        if (b[8] && !b[7] || b[8] && b[7] && b[6]&&~(b[5]&b[4]) )   //0开头的指令或者11**且不为1111时才会给标志位赋值
+	            mymem[2] = zc;  
+	            lt = {ZF,CF,OF,SF,PF};  
+	    end     
+	    wire [1:0] A,B;  
+  	    assign A = b[3:2];  
+	    assign B = b[1:0];  
+	    alu(code,mymem[A],mymem[B],zc,ZF,CF,OF,SF,PF);  
+	    wire [7:0] n;  
+	    assign n = mymem[addr];  
+  	    parameter CLK_COUNT = 249999;//时钟计数上限  
+	    reg [31:0] count;//计数  
+	    reg [1:0] id;//id0~3对应左到右四个数码管  
+	    wire flag;  //flag标记补码是否表示负数  
+	    assign flag=n[7];    
+	//8位2进制，十进制至多3位  
+	    reg [7:0] n1;    //百位  
+	    reg [7:0] n2;    //十位  
+	    reg [7:0] n3;    //个位  
+	    reg [7:0] abs;  
+	    reg [7:0] tmp1;  
+	    reg [1:0] tmp2;  
+	    reg [31:0] tmp3;  
+	    always @(*)  
+	    case(flag) //求正数的个十百位  
+	    1'b0:  
+	        begin  
+	           n1 = n / 100 % 10;  
+	           n2 = n / 10 % 10;  
+	           n3 = n % 10;  
+	        end  
+	    1'b1:  
+	        begin  
+	           tmp1=1;  
+	           abs=~n;  //求负数的个十百位  
+             while((abs&tmp1)!=0)begin
+	                abs=abs^tmp1;  
+                tmp1=tmp1<<1;  
+	           end  
+	           abs=abs|tmp1;  
+	           n1 = abs / 100 % 10;          
+           n2 = abs / 10 % 10;          
+           n3 = abs % 10;  
+	        end  
+	    endcase   
+	    always @ (posedge clk)//时钟上升沿  
+	    begin //根据时钟信号控制切换显示的数码管  
+	         if (count == CLK_COUNT) begin
+       count <= 0;
+       id <= (id + 1); //切换
+    end
+    else count <= count+1;
+end
+	     
+	   //数码管显示
+	    always @ (*)  
+	    begin          
+	        if (b[8] && b[7] && b[6] && b[5] && b[4] && !b[3] && !b[2]) 
+	        begin  
+	            if (id == 0)   
+  	            begin             
+	                led_id <= 8'b1111_0111;//第四位的灯 
+	                if(n[7]==1)  
+	                out_led<=7'b1111110;//负号  
+	                else out_led<=7'b1111111;//不显示  
+	            end  
+	            else if (id == 1)//其余三个管显示逻辑相同  
+	            begin  
+	                led_id <= 8'b1111_1011;  
+	                begin  
+	                case(n1)  
+	                  4'b0000: out_led = 7'b0000001;    //0
+           		      4'b0001: out_led = 7'b1001111;    //1
+            		  4'b0010: out_led = 7'b0010010;    //2
+            		  4'b0011: out_led = 7'b0000110;    //3
+            		  4'b0100: out_led = 7'b1001100;    //4
+            		  4'b0101: out_led = 7'b0100100;    //5
+            		  4'b0110: out_led = 7'b0100000;    //6
+            		  4'b0111: out_led = 7'b0001111;    //7
+            		  4'b1000: out_led = 7'b0000000;    //8
+            		  4'b1001: out_led = 7'b0000100;    //9 
+	                endcase  
+	                end   
+	            end  
+	            else if (id == 2)  
+	            begin  
+	                led_id <= 8'b1111_1101;  
+	                begin  
+	                case(n2)  
+	                4'b0000: out_led = 7'b0000001;    //0
+            		4'b0001: out_led = 7'b1001111;    //1
+            		4'b0010: out_led = 7'b0010010;    //2
+            		4'b0011: out_led = 7'b0000110;    //3
+            		4'b0100: out_led = 7'b1001100;    //4
+            		4'b0101: out_led = 7'b0100100;    //5
+            		4'b0110: out_led = 7'b0100000;    //6
+            		4'b0111: out_led = 7'b0001111;    //7
+            		4'b1000: out_led = 7'b0000000;    //8
+            		4'b1001: out_led = 7'b0000100;    //9 
+	                endcase  
+	                end  
+	            end  
+	            else if (id == 3)  
+	            begin  
+	                led_id <= 8'b1111_1110;  
+	                begin  
+	                case(n3)  
+	                 4'b0000: out_led = 7'b0000001;    //0
+			         4'b0001: out_led = 7'b1001111;    //1
+			         4'b0010: out_led = 7'b0010010;    //2
+			         4'b0011: out_led = 7'b0000110;    //3
+			         4'b0100: out_led = 7'b1001100;    //4
+			         4'b0101: out_led = 7'b0100100;    //5
+			         4'b0110: out_led = 7'b0100000;    //6
+			         4'b0111: out_led = 7'b0001111;    //7
+			         4'b1000: out_led = 7'b0000000;    //8
+			         4'b1001: out_led = 7'b0000100;    //9
+	                endcase  
+	                end  
+	            end   
+	        end  
+	        else begin  
+	            led_id <= 8'b1111_0000;  
+            out_led = 7'b1111111;  
+	        end  
+	    end  
+endmodule
+
+
+endmodule
+
