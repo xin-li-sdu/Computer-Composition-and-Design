@@ -1,0 +1,80 @@
+module alu(
+input [3:0]a, //操作数 a
+input [3:0]b, //操作数 b
+input [2:0]aluc, //控制 alu 的操作
+output reg [3:0]r, //运算结果
+output zero, //0 标志位
+output negative, //负数标志位
+output overflow ,//溢出标志位
+//output cinflow , //进借位标志位
+output printflow  //奇偶标志位
+);
+wire [3:0] R;
+wire overflow1,zero1,slt1;
+reg c,op,m;
+assign overflow=a[3]^b[3]^r[3];
+assign zero=R==0;;
+assign negative=R[3];
+//assign cinflow=;
+assign printflow=m;
+full_add_sub4 f(a,b,c,op,R,overflow1);
+always@* begin
+c=0;
+case(aluc)
+3'b000:begin r=R;op=1;end
+3'b001:begin r=R;op=0;end
+3'b010:begin r=a&b; end
+3'b011:begin r=a|b; end
+3'b100:begin r=a^b; end
+3'b101:begin r=~(a|b); end
+3'b110:begin r=(a<b)?1:0; end
+endcase
+end
+
+always@* begin
+case(r)
+4'b0001:begin m=1;end
+4'b0010:begin m=1;end
+4'b0100:begin m=1; end
+4'b1000:begin m=1; end
+4'b1110:begin m=1; end
+4'b1101:begin m=1; end
+4'b1011:begin m=1; end
+4'b0111:begin m=1; end
+default:
+  m=0;
+endcase
+end
+endmodule
+
+module full_add_sub4(
+input [3:0] a,
+input [3:0] b,
+input cin,
+input sub,//决定加法还是减法
+output [3:0] sum,//运算结果补码形式
+output of //溢出标志
+);
+wire [3:0]temp1;
+wire [3:0]temp2;
+wire g;
+assign g=cin^~sub;//=1 加法，=0 减法
+assign temp2[0]=sub?b[0]:~b[0];
+assign temp2[1]=sub?b[1]:~b[1];
+assign temp2[2]=sub?b[2]:~b[2];
+assign temp2[3]=sub?b[3]:~b[3];
+adder i1 (a[0],temp2[0],g, temp1[1],sum[0]);
+adder i2 (a[1],temp2[1],temp1[1],temp1[2],sum[1]);
+adder i3 (a[2],temp2[2],temp1[2],temp1[3],sum[2]);
+adder i4 (a[3],temp2[3],temp1[3],temp1[0],sum[3]);
+endmodule
+module adder(
+input a1,//1 位二进制加数
+input b1,//1 位二进制加数
+input cin,//低位来的进位信号
+output cout,//向高位的进位信号
+output sum//1 位和数
+);
+assign sum=a1^b1^cin;
+assign cout=(a1&b1)|cin&(a1^b1);
+endmodule

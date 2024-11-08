@@ -1,0 +1,40 @@
+module MULT(
+input [3:0] A,
+input [3:0] B, 
+output reg [7:0] Z
+);
+integer k;
+//wire [3:0] n=1111;
+wire [3:0] I=0001;
+wire [3:0] a=~A+I;
+wire [3:0] b=~B+I;
+wire [1:0]i={A[3],B[3]};
+always @ (* )
+begin
+  Z=0;
+  case(i)
+  2'b00:begin//都是正数
+    for(k=0;k<4;k=k+1)
+     if(A[k])
+       Z=Z+(B<<k);
+   end
+   2'b11: begin//都是负数
+    for(k=0;k<4;k=k+1)
+     if(a[k])
+       Z=Z+(b<<k);
+   end
+    2'b10: begin//A是负数
+    for(k=0;k<4;k=k+1)
+     if(B[k])
+       Z=Z+(a<<k);
+    Z=~Z+I;
+   end
+     2'b01:begin//B是负数
+    for(k=0;k<4;k=k+1)
+     if(b[k])
+       Z=Z+(A<<k);
+    Z=~Z+I;
+   end 
+    endcase
+end
+endmodule
